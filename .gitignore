@@ -216,3 +216,21 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Environment
+venv/
+.env
+
+# Data & models
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+*.pt
+*.bin
+*.ckpt
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
