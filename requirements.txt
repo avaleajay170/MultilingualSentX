@@ -1,0 +1,12 @@
+flask
+flask-cors
+pymongo
+python-dotenv
+transformers
+torch
+shap
+lime
+scikit-learn
+pandas
+numpy
+openai
