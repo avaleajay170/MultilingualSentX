@@ -4,22 +4,22 @@ from app.models.analysis_results import save_result
 
 analyze_bp = Blueprint("analyze", __name__)
 
+from src.predict_sentiment import predict_sentiment
+
 def run_pipeline(text):
-    """
-    PLACEHOLDER — replace with real model inference once
-    MuRIL/XLM-R training and SHAP/LIME/LLM integration are ready.
-    """
+    result = predict_sentiment(text)
+
     return {
-        "detected_languages": ["Hindi", "Marathi", "English"],
-        "sentiment": "Negative",
-        "sentiment_confidence": 0.91,
-        "aspect": "Delivery",
+        "detected_languages": ["Hindi", "Marathi", "English"],  # placeholder — language detection comes later
+        "sentiment": result["sentiment"],
+        "sentiment_confidence": result["confidence"],
+        "aspect": "Quality",  # placeholder — aspect model comes next
         "explanation": {
-            "shap_words": ["late", "zali"],
-            "lime_words": ["delivery", "late"],
-            "llm_rationale": "Placeholder rationale — LLM integration pending."
+            "shap_words": [],
+            "lime_words": [],
+            "llm_rationale": "Explanation pending — SHAP/LIME/LLM integration not yet built."
         },
-        "model_used": "placeholder"
+        "model_used": "MuRIL (fine-tuned)"
     }
 
 @analyze_bp.route("/analyze/single", methods=["POST"])

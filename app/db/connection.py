@@ -1,4 +1,5 @@
 import os
+import certifi
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 from dotenv import load_dotenv
@@ -14,7 +15,14 @@ db = None
 def init_db():
     """Initialize the MongoDB connection. Call this once at app startup."""
     global client, db
-    client = MongoClient(MONGO_URI, server_api=ServerApi('1'))
+
+    if MONGO_URI.startswith("mongodb+srv://"):
+        # Atlas (cloud) connection — needs TLS
+        client = MongoClient(MONGO_URI, server_api=ServerApi('1'), tlsCAFile=certifi.where())
+    else:
+        # Local MongoDB — no TLS
+        client = MongoClient(MONGO_URI, server_api=ServerApi('1'))
+
     db = client[DB_NAME]
     try:
         client.admin.command('ping')
