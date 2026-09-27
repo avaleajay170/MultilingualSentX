@@ -1,19 +1,16 @@
-import os
 from flask import Flask
-from flask_cors import CORS
-from dotenv import load_dotenv
-
-load_dotenv()
-
+from app.db.connection import init_db
+from app.routes.analyze import analyze_bp
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)
 
-    app.config["MONGO_URI"] = os.getenv("MONGO_URI")
+    init_db()
 
     @app.route("/")
-    def index():
+    def home():
         return "MultilingualSentX backend is running."
+
+    app.register_blueprint(analyze_bp)
 
     return app
