@@ -234,3 +234,4 @@ data/processed/*
 .DS_Store
 .vscode/
 .idea/saved_models/muril_aspect/
+saved_models/
