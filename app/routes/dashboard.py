@@ -41,3 +41,23 @@ def dashboard_stats():
         },
         "aspect_analysis": aspect_breakdown
     }), 200
+
+@dashboard_bp.route("/dashboard/recent", methods=["GET"])
+def recent_analyses():
+    db = get_db()
+    results = list(
+        db.analysis_results.find().sort("created_at", -1).limit(10)
+    )
+
+    output = []
+    for r in results:
+        comment = db.comments.find_one({"_id": r["comment_id"]})
+        output.append({
+            "text": comment["text"] if comment else "",
+            "sentiment": r["sentiment"],
+            "sentiment_confidence": r["sentiment_confidence"],
+            "aspect": r["aspect"],
+            "created_at": r["created_at"].isoformat()
+        })
+
+    return jsonify(output), 200

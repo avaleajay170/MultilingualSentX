@@ -3,7 +3,7 @@ from bson import ObjectId
 from app.db.connection import get_db
 
 def save_result(comment_id, detected_languages, sentiment, sentiment_confidence,
-                 aspect, explanation, model_used="MuRIL"):
+                 aspect, explanation, model_used="MuRIL", aspect_confidence=None):
     db = get_db()
     result = {
         "comment_id": ObjectId(comment_id),
@@ -11,6 +11,7 @@ def save_result(comment_id, detected_languages, sentiment, sentiment_confidence,
         "sentiment": sentiment,
         "sentiment_confidence": sentiment_confidence,
         "aspect": aspect,
+        "aspect_confidence": aspect_confidence,
         "explanation": explanation,
         "model_used": model_used,
         "created_at": datetime.utcnow()

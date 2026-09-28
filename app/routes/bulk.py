@@ -51,6 +51,7 @@ def analyze_bulk():
                 sentiment=analysis["sentiment"],
                 sentiment_confidence=analysis["sentiment_confidence"],
                 aspect=analysis["aspect"],
+                aspect_confidence=analysis["aspect_confidence"],
                 explanation=analysis["explanation"],
                 model_used=analysis["model_used"]
             )

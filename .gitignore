@@ -233,4 +233,4 @@ data/processed/*
 # OS / editor
 .DS_Store
 .vscode/
-.idea/
+.idea/saved_models/muril_aspect/
