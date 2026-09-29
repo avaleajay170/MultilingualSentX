@@ -235,3 +235,4 @@ data/processed/*
 .vscode/
 .idea/saved_models/muril_aspect/
 saved_models/
+fonts/emoji_cache/

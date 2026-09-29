@@ -1,5 +1,20 @@
+import io
+import os
+from datetime import datetime
+from xml.sax.saxutils import escape
+
+import emoji
+import requests
 import pandas as pd
 from flask import Blueprint, request, jsonify, send_file
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
 from app.models.comments import create_comment
 from app.models.analysis_results import save_result, get_results_by_batch
 from app.models.batches import create_batch, update_batch_status, get_batch
@@ -7,6 +22,76 @@ from app.routes.analyze import run_pipeline
 from app.db.connection import get_db
 
 bulk_bp = Blueprint("bulk", __name__)
+
+pdfmetrics.registerFont(TTFont("NotoDevanagari", "fonts/NotoSansDevanagari-Regular.ttf"))
+
+EMOJI_CACHE_DIR = "fonts/emoji_cache"
+os.makedirs(EMOJI_CACHE_DIR, exist_ok=True)
+
+TWEMOJI_BASE_URL = "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/"
+
+
+def _emoji_to_codepoint(emoji_char):
+    """Convert an emoji character to its Twemoji filename codepoint (variation selector stripped)."""
+    codepoints = [f"{ord(c):x}" for c in emoji_char if ord(c) != 0xFE0F]
+    return "-".join(codepoints)
+
+
+def _get_emoji_image_path(emoji_char):
+    """Download (if needed) and return the local cached path for an emoji's Twemoji PNG. None on failure."""
+    codepoint = _emoji_to_codepoint(emoji_char)
+    if not codepoint:
+        return None
+
+    local_path = os.path.join(EMOJI_CACHE_DIR, f"{codepoint}.png")
+    if os.path.exists(local_path):
+        return local_path
+
+    url = f"{TWEMOJI_BASE_URL}{codepoint}.png"
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            with open(local_path, "wb") as f:
+                f.write(response.content)
+            return local_path
+    except Exception:
+        pass
+    return None
+
+
+def build_comment_paragraph(text, style, emoji_size=9):
+    """Build a ReportLab Paragraph with emojis rendered as inline Twemoji images."""
+    if not text:
+        return Paragraph("", style)
+
+    matches = emoji.emoji_list(text)
+    if not matches:
+        return Paragraph(escape(text), style)
+
+    parts = []
+    cursor = 0
+    for match in matches:
+        start, end = match["match_start"], match["match_end"]
+        emoji_char = match["emoji"]
+
+        if start > cursor:
+            parts.append(escape(text[cursor:start]))
+
+        image_path = _get_emoji_image_path(emoji_char)
+        if image_path:
+            parts.append(
+                f'<img src="{image_path}" width="{emoji_size}" height="{emoji_size}" valign="middle"/>'
+            )
+        else:
+            parts.append(escape(emoji_char))
+
+        cursor = end
+
+    if cursor < len(text):
+        parts.append(escape(text[cursor:]))
+
+    return Paragraph("".join(parts), style)
+
 
 @bulk_bp.route("/analyze/bulk", methods=["POST"])
 def analyze_bulk():
@@ -98,15 +183,7 @@ def get_bulk_results(batch_id):
             } for r in results
         ]
     }), 200
-    
-    from flask import send_file
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-import io
-from datetime import datetime
+
 
 @bulk_bp.route("/analyze/bulk/<batch_id>/report", methods=["GET"])
 def download_bulk_report(batch_id):
@@ -118,11 +195,15 @@ def download_bulk_report(batch_id):
     db = get_db()
 
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20*mm, bottomMargin=20*mm)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20 * mm, bottomMargin=20 * mm)
     styles = getSampleStyleSheet()
+    styles["Normal"].fontName = "NotoDevanagari"
+    styles["Heading2"].fontName = "NotoDevanagari"
     elements = []
 
-    title_style = ParagraphStyle("TitleStyle", parent=styles["Title"], fontSize=20, spaceAfter=6)
+    title_style = ParagraphStyle(
+        "TitleStyle", parent=styles["Title"], fontSize=20, spaceAfter=6, fontName="NotoDevanagari"
+    )
     elements.append(Paragraph("MultilingualSentX — Sentiment Analysis Report", title_style))
     elements.append(Paragraph(f"File: {batch['filename']}", styles["Normal"]))
     elements.append(Paragraph(f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", styles["Normal"]))
@@ -138,6 +219,7 @@ def download_bulk_report(batch_id):
     summary_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f1f5f9")),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("FONTNAME", (0, 0), (-1, -1), "NotoDevanagari"),
         ("FONTSIZE", (0, 0), (-1, -1), 10),
         ("TOPPADDING", (0, 0), (-1, -1), 6),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
@@ -154,13 +236,14 @@ def download_bulk_report(batch_id):
     sentiment_data = [["Sentiment", "Count", "Percentage"]]
     total = len(results) or 1
     for label, count in sentiment_counts.items():
-        pct = f"{(count/total)*100:.1f}%"
+        pct = f"{(count / total) * 100:.1f}%"
         sentiment_data.append([label, str(count), pct])
     sentiment_table = Table(sentiment_data, colWidths=[150, 100, 100])
     sentiment_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f2937")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("FONTNAME", (0, 0), (-1, -1), "NotoDevanagari"),
         ("FONTSIZE", (0, 0), (-1, -1), 10),
         ("TOPPADDING", (0, 0), (-1, -1), 6),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
@@ -183,6 +266,7 @@ def download_bulk_report(batch_id):
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f2937")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("FONTNAME", (0, 0), (-1, -1), "NotoDevanagari"),
         ("FONTSIZE", (0, 0), (-1, -1), 10),
         ("TOPPADDING", (0, 0), (-1, -1), 6),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
@@ -192,17 +276,20 @@ def download_bulk_report(batch_id):
 
     # Per-comment detail table
     elements.append(Paragraph("Comment-Level Results", styles["Heading2"]))
-    cell_style = ParagraphStyle("Cell", parent=styles["Normal"], fontSize=8, leading=10)
+    cell_style = ParagraphStyle(
+        "Cell", parent=styles["Normal"], fontSize=8, leading=12, fontName="NotoDevanagari"
+    )
     detail_data = [["#", "Comment", "Sentiment", "Confidence", "Aspect"]]
 
     for i, r in enumerate(results, start=1):
         comment = db.comments.find_one({"_id": r["comment_id"]})
         text = comment["text"] if comment else ""
+        comment_paragraph = build_comment_paragraph(text, cell_style)
         detail_data.append([
             str(i),
-            Paragraph(text, cell_style),
+            comment_paragraph,
             r["sentiment"],
-            f"{r['sentiment_confidence']*100:.1f}%",
+            f"{r['sentiment_confidence'] * 100:.1f}%",
             r["aspect"]
         ])
 
@@ -211,6 +298,7 @@ def download_bulk_report(batch_id):
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f2937")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("FONTNAME", (0, 0), (-1, -1), "NotoDevanagari"),
         ("FONTSIZE", (0, 0), (-1, 0), 9),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("TOPPADDING", (0, 0), (-1, -1), 4),
