@@ -3,6 +3,7 @@ import Navbar from './components/Navbar'
 import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
 import Analysis from './pages/Analysis'
+import BulkAnalysis from './pages/BulkAnalysis'
 import Results from './pages/Results'
 import './App.css'
 
@@ -22,6 +23,11 @@ function App() {
         <Route
           path="/analysis"
           element={<Analysis />}
+        />
+
+        <Route
+          path="/bulk"
+          element={<BulkAnalysis />}
         />
 
         <Route

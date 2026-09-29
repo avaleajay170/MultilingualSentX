@@ -1,8 +1,8 @@
 import pandas as pd
 from flask import Blueprint, request, jsonify
 from app.models.comments import create_comment
-from app.models.analysis_results import save_result
-from app.models.batches import create_batch, update_batch_status
+from app.models.analysis_results import save_result, get_results_by_batch
+from app.models.batches import create_batch, update_batch_status, get_batch
 from app.routes.analyze import run_pipeline
 
 bulk_bp = Blueprint("bulk", __name__)
@@ -68,3 +68,32 @@ def analyze_bulk():
         "processed": processed,
         "errors": errors
     }), 201
+
+
+@bulk_bp.route("/analyze/bulk/<batch_id>", methods=["GET"])
+def get_bulk_results(batch_id):
+    batch = get_batch(batch_id)
+    if not batch:
+        return jsonify({"error": "Batch not found"}), 404
+
+    results = get_results_by_batch(batch_id)
+
+    sentiment_counts = {"Positive": 0, "Negative": 0, "Neutral": 0}
+    for r in results:
+        sentiment_counts[r["sentiment"]] = sentiment_counts.get(r["sentiment"], 0) + 1
+
+    return jsonify({
+        "batch_id": str(batch["_id"]),
+        "filename": batch["filename"],
+        "status": batch["status"],
+        "total_comments": batch["total_comments"],
+        "sentiment_breakdown": sentiment_counts,
+        "results": [
+            {
+                "sentiment": r["sentiment"],
+                "sentiment_confidence": r["sentiment_confidence"],
+                "aspect": r["aspect"],
+                "aspect_confidence": r.get("aspect_confidence")
+            } for r in results
+        ]
+    }), 200

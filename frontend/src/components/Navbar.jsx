@@ -11,6 +11,7 @@ function Navbar() {
         <Link to="/">Home</Link>
         <Link to="/dashboard">Dashboard</Link>
         <Link to="/analysis">Analysis</Link>
+        <Link to="/bulk">Bulk Upload</Link>
         <Link to="/results">Results</Link>
       </div>
     </nav>

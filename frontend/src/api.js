@@ -24,3 +24,23 @@ export async function getRecentAnalyses() {
     if (!res.ok) throw new Error(data.error || "Failed to load recent analyses");
     return data;
 }
+
+export async function analyzeBulk(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(`${BASE_URL}/analyze/bulk`, {
+        method: "POST",
+        body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Bulk upload failed");
+    return data;
+}
+
+export async function getBulkResults(batchId) {
+    const res = await fetch(`${BASE_URL}/analyze/bulk/${batchId}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to load batch results");
+    return data;
+}
