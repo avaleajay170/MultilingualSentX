@@ -9,12 +9,16 @@ function Analysis() {
   const navigate = useNavigate();
 
   const handleAnalyze = async () => {
+    if (loading) return;
+
     if (!text.trim()) {
       setError("Please enter some text to analyze.");
       return;
     }
+
     setLoading(true);
     setError(null);
+
     try {
       const result = await analyzeSingle(text);
       navigate("/results", { state: { result, inputText: text } });
@@ -73,23 +77,36 @@ function Analysis() {
           <span>
             Supports multilingual code-mixed text
           </span>
+
           <span>
             {text.length} / 1000 characters
           </span>
         </div>
 
         {error && (
-          <p style={{ color: "#dc2626", marginTop: "8px" }}>{error}</p>
+          <p style={{ color: "#dc2626", marginTop: "8px" }}>
+            {error}
+          </p>
         )}
 
         <div className="analysis-actions">
-          <button className="analyze-button" onClick={handleAnalyze} disabled={loading}>
+
+          <button
+            className="analyze-button"
+            onClick={handleAnalyze}
+            disabled={loading}
+          >
             {loading ? "Analyzing..." : "Analyze Sentiment"}
           </button>
 
-          <button className="secondary-button" onClick={handleClear} disabled={loading}>
+          <button
+            className="secondary-button"
+            onClick={handleClear}
+            disabled={loading}
+          >
             Clear
           </button>
+
         </div>
 
       </div>
@@ -98,26 +115,38 @@ function Analysis() {
 
         <div className="info-card">
           <div className="info-icon">🌐</div>
+
           <h3>Multilingual</h3>
-          <p>Supports Hindi, Marathi and English code-mixed text.</p>
+
+          <p>
+            Supports Hindi, Marathi and English code-mixed text.
+          </p>
         </div>
 
         <div className="info-card">
           <div className="info-icon">🧠</div>
+
           <h3>AI Powered</h3>
-          <p>Uses multilingual AI models to understand sentiment.</p>
+
+          <p>
+            Uses multilingual AI models to understand sentiment.
+          </p>
         </div>
 
         <div className="info-card">
           <div className="info-icon">💡</div>
+
           <h3>Explainable</h3>
-          <p>Provides understandable insights behind the prediction.</p>
+
+          <p>
+            Provides understandable insights behind the prediction.
+          </p>
         </div>
 
       </div>
 
     </div>
-  )
+  );
 }
 
-export default Analysis
+export default Analysis;

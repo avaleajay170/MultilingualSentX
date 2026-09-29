@@ -6,24 +6,34 @@ from src.predict_aspect import predict_aspect
 
 analyze_bp = Blueprint("analyze", __name__)
 
-def run_pipeline(text):
+def run_pipeline(text, explain=False):
     print("PIPELINE STEP 1 - Starting sentiment prediction", flush=True)
-
     sentiment_result = predict_sentiment(text)
-
     print("PIPELINE STEP 2 - Sentiment completed:", sentiment_result, flush=True)
+
+    print("PIPELINE STEP 3 - Starting aspect prediction", flush=True)
+    aspect_result = predict_aspect(text)
+    print("PIPELINE STEP 4 - Aspect completed:", aspect_result, flush=True)
+
+    if explain:
+        print("PIPELINE STEP 5 - Generating SHAP/LIME explanation...", flush=True)
+        from src.explain_sentiment import generate_explanation
+        explanation = generate_explanation(text)
+        print("PIPELINE STEP 6 - Explanation completed:", explanation, flush=True)
+    else:
+        explanation = {
+            "shap_words": [],
+            "lime_words": [],
+            "llm_rationale": "Explanation skipped for bulk processing."
+        }
 
     return {
         "detected_languages": ["Hindi", "Marathi", "English"],
         "sentiment": sentiment_result["sentiment"],
         "sentiment_confidence": sentiment_result["confidence"],
-        "aspect": "Unknown",
-        "aspect_confidence": 0.0,
-        "explanation": {
-            "shap_words": [],
-            "lime_words": [],
-            "llm_rationale": "Explanation pending — SHAP/LIME/LLM integration not yet built."
-        },
+        "aspect": aspect_result["aspect"],
+        "aspect_confidence": aspect_result["confidence"],
+        "explanation": explanation,
         "model_used": "MuRIL (fine-tuned)"
     }
 
@@ -49,8 +59,8 @@ def analyze_single():
     comment_id = create_comment(text, source="single")
     print("STEP 3 SUCCESS - comment_id:", comment_id)
 
-    print("STEP 4 - Running pipeline...")
-    analysis = run_pipeline(text)
+    print("STEP 4 - Running pipeline (with explanation)...")
+    analysis = run_pipeline(text, explain=True)
     print("STEP 4 SUCCESS - analysis:", analysis)
 
     print("STEP 5 - Saving result...")

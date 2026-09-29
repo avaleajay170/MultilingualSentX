@@ -120,7 +120,6 @@ function Results() {
 
       <div className="result-grid">
 
-
         {/* Confidence */}
 
         <div className="result-card">
@@ -217,6 +216,39 @@ function Results() {
               {result?.explanation?.llm_rationale ||
                 "Explanation is not available for this analysis yet."}
             </p>
+
+
+            {/* =========================
+                SHAP KEY WORDS
+            ========================= */}
+
+            {result?.explanation?.shap_words &&
+              result.explanation.shap_words.length > 0 && (
+                <div style={{ marginTop: "12px" }}>
+
+                  <strong>
+                    Key words (SHAP):{" "}
+                  </strong>
+
+                  {result.explanation.shap_words.map((w, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        display: "inline-block",
+                        background: "#ede9fe",
+                        color: "#5b21b6",
+                        padding: "2px 10px",
+                        borderRadius: "12px",
+                        margin: "2px 4px 2px 0",
+                        fontSize: "13px"
+                      }}
+                    >
+                      {w}
+                    </span>
+                  ))}
+
+                </div>
+              )}
 
           </div>
 
